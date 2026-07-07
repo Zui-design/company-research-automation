@@ -1,0 +1,496 @@
+{
+  "name": "企業分析_新_開発中",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        512
+      ],
+      "id": "e82849d2-90be-4f63-8acc-1b2c32dff86b",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        640
+      ],
+      "id": "5936a0e9-fbf2-4301-856b-ba495cae8d96",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Anthropic account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "【私のガクチカ（ベースとなるエピソード）】\n（ここにあなた自身のガクチカ・自己PRエピソードを記入してください。例：所属団体での課題解決経験など）\n\n【私の特徴・志向】\n（あなたの強み・興味関心を箇条書きで記入してください。例：課題分析が得意／特定技術への関心 など）\n\nーーーーーーーーーーーーーーーーーーーーーーーー\n【依頼】\n\nあなたは優秀な就職活動のコンサルタントです。\n\n上記の私のガクチカと特徴・志向をふまえ、相性の良い企業をちょうど5社、厳選して提案してください。\n\n今までの提案とは絶対に被らないようにしてください。\n【探してほしい企業の条件】\n\n・BtoB（企業向け）ビジネスで高いシェアを持っている企業、または独自の技術力や強みがあり成長が見込めるIT・メーカー・サービス企業\n\n・誰もが知る超大手ばかりでなく、「知る人ぞ知る隠れた優良企業」も積極的に含めること\n\n・各企業について、企業名（kigyou）と、その企業を私に薦める理由（riyuu）を出力してください。",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        0,
+        512
+      ],
+      "id": "1b16a84c-1eb8-4e87-91aa-f538be0ba87b",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"kigyou_list\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"kigyou\": { \"type\": \"string\" },\n          \"riyuu\": { \"type\": \"string\" }\n        },\n        \"required\": [\"kigyou\", \"riyuu\"]\n      }\n    }\n  },\n  \"required\": [\"kigyou_list\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        144,
+        640
+      ],
+      "id": "9f644b37-6476-4eeb-b5f4-2fef3a40d808",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "query": "={{ $('Split Out').item.json.kigyou }} 採用 年収 評判",
+        "options": {}
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavily",
+      "typeVersion": 1,
+      "position": [
+        704,
+        528
+      ],
+      "id": "04351cd2-52e0-4ac7-83a3-8b4f0ce4b43e",
+      "name": "Search",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "tavilyApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=あなたは優秀な就活アナリストです。\n以下の企業について、Web検索で得た情報をもとに分析してください。\n\n【企業名】\n{{ $('Split Out').item.json.kigyou }}\n\n【検索で得た情報】\n{{ $json.results[0].content }}\n\n以下の4項目で分析してください。\n- hyoka：評判・強みの要約（800字程度）\n- nenshu：平均年収・初任給などの給与情報\n- kyujitsu：年間休日・残業・有給などの労働環境\n- biko：福利厚生・勤務地など特記事項",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        512,
+        736
+      ],
+      "id": "7ce916ce-472e-4333-8845-be90ed702c51",
+      "name": "Basic LLM Chain1",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-opus-4-7",
+          "mode": "list",
+          "cachedResultName": "Claude Opus 4.7"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        512,
+        864
+      ],
+      "id": "83c5c360-d632-47e9-a787-c18fd68a2d72",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Anthropic account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"hyoka\": { \"type\": \"string\", \"description\": \"企業の評判・強みの要約（800字程度）\" },\n    \"nenshu\": { \"type\": \"string\", \"description\": \"平均年収・初任給などの給与情報\" },\n    \"kyujitsu\": { \"type\": \"string\", \"description\": \"年間休日・残業・有給などの労働環境\" },\n    \"biko\": { \"type\": \"string\", \"description\": \"福利厚生・勤務地など特記事項\" }\n  },\n  \"required\": [\"hyoka\", \"nenshu\", \"kyujitsu\", \"biko\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        864
+      ],
+      "id": "907e2dc9-32cf-4906-afca-ccb7b9742bc8",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.kigyou_list",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        288,
+        512
+      ],
+      "id": "b7513ea5-7b91-432b-93a9-7b435bf3f3a7",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        512
+      ],
+      "id": "cf29ffa3-8a88-4b1c-8ba7-0a781f15086b",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "シート1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "kaisha": "={{ $('Split Out').item.json.kigyou }}",
+            "riyuu": "={{ $('Split Out').item.json.riyuu }}",
+            "hyoka": "={{ $json.output.hyoka }}",
+            "nenshu": "={{ $json.output.nenshu }}",
+            "kyujitsu": "={{ $json.output.kyujitsu }}",
+            "biko": "={{ $json.output.biko }}",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "kaisha"
+          ],
+          "schema": [
+            {
+              "id": "kaisha",
+              "displayName": "kaisha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "riyuu",
+              "displayName": "riyuu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "hyoka",
+              "displayName": "hyoka",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nenshu",
+              "displayName": "nenshu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "kyujitsu",
+              "displayName": "kyujitsu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "biko",
+              "displayName": "biko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "score_riyuu",
+              "displayName": "score_riyuu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ir_nenshu",
+              "displayName": "ir_nenshu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ir_summary",
+              "displayName": "ir_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        816,
+        832
+      ],
+      "id": "784bb8bd-5d33-4879-94f2-5561f0512092",
+      "name": "Append or update row in sheet",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain1": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "1l7wcVfiBiNRhcdE",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "7160d5c0-4ff2-42a9-9024-55dc1871c7df",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "gEUNQYi9T7OSaJEg",
+  "tags": []
+}
