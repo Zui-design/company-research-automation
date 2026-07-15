@@ -42,7 +42,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "【私のガクチカ（ベースとなるエピソード）】\n（ここにあなた自身のガクチカ・自己PRエピソードを記入してください。例：所属団体での課題解決経験など）\n\n【私の特徴・志向】\n（あなたの強み・興味関心を箇条書きで記入してください。例：課題分析が得意／特定技術への関心 など）\n\nーーーーーーーーーーーーーーーーーーーーーーーー\n【依頼】\n\nあなたは優秀な就職活動のコンサルタントです。\n\n上記の私のガクチカと特徴・志向をふまえ、相性の良い企業をちょうど5社、厳選して提案してください。\n\n今までの提案とは絶対に被らないようにしてください。\n【探してほしい企業の条件】\n\n・BtoB（企業向け）ビジネスで高いシェアを持っている企業、または独自の技術力や強みがあり成長が見込めるIT・メーカー・サービス企業\n\n・誰もが知る超大手ばかりでなく、「知る人ぞ知る隠れた優良企業」も積極的に含めること\n\n・各企業について、企業名（kigyou）と、その企業を私に薦める理由（riyuu）を出力してください。",
+        "text": "【私のガクチカ（ベースとなるエピソード）】\n（ここにあなた自身のガクチカ・自己PRエピソードを記入してください）\n\n【私の特徴・志向】\n（あなたの強み・興味関心を箇条書きで記入してください）\n\nーーーーーーーーーーーーーーーーーーーーーーーー\n【依頼】\n\nあなたは優秀な就職活動のコンサルタントです。\n\n上記の私のガクチカと特徴・志向をふまえ、相性の良い企業をちょうど5社、厳選して提案してください。\n\n今までの提案とは絶対に被らないようにしてください。\n【探してほしい企業の条件】\n\n・BtoB（企業向け）ビジネスで高いシェアを持っている企業、または独自の技術力や強みがあり成長が見込めるIT・メーカー・サービス企業\n\n・誰もが知る超大手ばかりでなく、「知る人ぞ知る隠れた優良企業」も積極的に含めること\n\n各企業について、企業名（kigyou）、推薦理由（riyuu）、証券コード（secCode／4桁の数字。上場企業のみ、未上場企業は空文字）を出力してください。",
         "hasOutputParser": true,
         "batching": {}
       },
@@ -58,7 +58,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"kigyou_list\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"kigyou\": { \"type\": \"string\" },\n          \"riyuu\": { \"type\": \"string\" }\n        },\n        \"required\": [\"kigyou\", \"riyuu\"]\n      }\n    }\n  },\n  \"required\": [\"kigyou_list\"]\n}"
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"kigyou_list\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"kigyou\": { \"type\": \"string\" },\n          \"riyuu\": { \"type\": \"string\" },\n          \"secCode\": { \"type\": \"string\", \"description\": \"その企業の証券コード（4桁）。未上場なら空文字\" }\n        },\n        \"required\": [\"kigyou\", \"riyuu\", \"secCode\"]\n      }\n    }\n  },\n  \"required\": [\"kigyou_list\"]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
@@ -94,7 +94,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=あなたは優秀な就活アナリストです。\n以下の企業について、Web検索で得た情報をもとに分析してください。\n\n【企業名】\n{{ $('Split Out').item.json.kigyou }}\n\n【検索で得た情報】\n{{ $json.results[0].content }}\n\n以下の4項目で分析してください。\n- hyoka：評判・強みの要約（800字程度）\n- nenshu：平均年収・初任給などの給与情報\n- kyujitsu：年間休日・残業・有給などの労働環境\n- biko：福利厚生・勤務地など特記事項",
+        "text": "=あなたは優秀な就活アナリストです。\n以下の企業について、Web検索で得た情報をもとに分析してください。\n\n【企業名】\n{{ $('Split Out').item.json.kigyou }}\n\n【検索で得た情報】\n{{ $json.results[0].content }}\n\n以下の4項目で分析してください。\n- hyoka：評判・強みの要約（800字程度）\n- nenshu：平均年収・初任給などの給与情報\n- kyujitsu：年間休日・残業・有給などの労働環境\n- biko：福利厚生・勤務地など特記事項\n\nまた、以下の私の志向に対する適合度を10点満点で採点してください。\n【評価基準】\n① 上流工程（要件定義・課題分析）に関われる\n② AI活用に積極的\n③ 研修・育成が手厚い\n④ 若手に裁量がある\n\n- score：上記を総合した適合度（1〜10の整数）\n- score_riyuu：その点数にした根拠（150字以内）",
         "hasOutputParser": true,
         "batching": {}
       },
@@ -139,7 +139,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"hyoka\": { \"type\": \"string\", \"description\": \"企業の評判・強みの要約（800字程度）\" },\n    \"nenshu\": { \"type\": \"string\", \"description\": \"平均年収・初任給などの給与情報\" },\n    \"kyujitsu\": { \"type\": \"string\", \"description\": \"年間休日・残業・有給などの労働環境\" },\n    \"biko\": { \"type\": \"string\", \"description\": \"福利厚生・勤務地など特記事項\" }\n  },\n  \"required\": [\"hyoka\", \"nenshu\", \"kyujitsu\", \"biko\"]\n}"
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"hyoka\": { \"type\": \"string\", \"description\": \"企業の評判・強みの要約（800字程度）\" },\n    \"nenshu\": { \"type\": \"string\", \"description\": \"平均年収・初任給などの給与情報\" },\n    \"kyujitsu\": { \"type\": \"string\", \"description\": \"年間休日・残業・有給などの労働環境\" },\n    \"biko\": { \"type\": \"string\", \"description\": \"福利厚生・勤務地など特記事項\" },\n    \"score\": { \"type\": \"number\", \"description\": \"私との適合度を1〜10の整数で\" },\n    \"score_riyuu\": { \"type\": \"string\", \"description\": \"そのスコアにした根拠を150字以内で\" }\n  },\n  \"required\": [\"hyoka\", \"nenshu\", \"kyujitsu\", \"biko\", \"score\", \"score_riyuu\"]\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
@@ -203,7 +203,9 @@
             "nenshu": "={{ $json.output.nenshu }}",
             "kyujitsu": "={{ $json.output.kyujitsu }}",
             "biko": "={{ $json.output.biko }}",
-            "updated_at": "={{ $now.toISO() }}"
+            "updated_at": "={{ $now.toISO() }}",
+            "score": "={{ $json.output.score }}",
+            "score_riyuu": "={{ $json.output.score_riyuu }}"
           },
           "matchingColumns": [
             "kaisha"
@@ -338,8 +340,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        816,
-        832
+        1456,
+        928
       ],
       "id": "784bb8bd-5d33-4879-94f2-5561f0512092",
       "name": "Append or update row in sheet",
@@ -351,6 +353,123 @@
           "name": "Google Sheets account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "552c6773-86b3-4e27-8d54-ad6f48fa0dc9",
+              "leftValue": "={{ $('Split Out').item.json.secCode }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        736
+      ],
+      "id": "6b42d756-b1fc-4e71-bf62-246bacac2b33",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "wZfuXzigoUfpMT4X",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/wZfuXzigoUfpMT4X",
+          "cachedResultName": "IR分析_開発中"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "secCode": "={{ $('Split Out').item.json.secCode }}"
+          },
+          "matchingColumns": [
+            "secCode"
+          ],
+          "schema": [
+            {
+              "id": "secCode",
+              "displayName": "secCode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        720
+      ],
+      "id": "4ba9200b-4392-4568-a54a-7a40ca7cbd1f",
+      "name": "Call 'IR分析_開発中'"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5998d87-1121-454b-b38d-68da4bc96dfc",
+              "name": "ir_nenshu",
+              "value": "未上場のため有報なし",
+              "type": "string"
+            },
+            {
+              "id": "0bda5da9-653c-43ca-afeb-0d8503410ea5",
+              "name": "ir_summary",
+              "value": "（公開情報なし）",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        864
+      ],
+      "id": "2de85290-683b-4889-a32e-ec37bc31cce8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1264,
+        880
+      ],
+      "id": "8aead97c-424b-42b6-8477-ec2585a386b8",
+      "name": "Merge"
     }
   ],
   "pinData": {},
@@ -476,6 +595,51 @@
           }
         ]
       ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Call 'IR分析_開発中'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'IR分析_開発中'": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        []
+      ]
     }
   },
   "active": false,
@@ -487,7 +651,7 @@
     "errorWorkflow": "1l7wcVfiBiNRhcdE",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "7160d5c0-4ff2-42a9-9024-55dc1871c7df",
+  "versionId": "0bf49606-e9c7-4568-bc69-77ef304c94d6",
   "meta": {
     "templateCredsSetupCompleted": true
   },
