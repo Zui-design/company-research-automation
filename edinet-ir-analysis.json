@@ -1,0 +1,421 @@
+{
+  "name": "IR分析_開発中",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "93d3f87c-27a3-4dea-985b-38c1bee2529b",
+              "name": "secCode",
+              "value": "7203",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -112,
+        32
+      ],
+      "id": "1d9b706b-d0fb-4b2d-a4e8-d3bb7a4f5fa8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "https://api.edinet-fsa.go.jp/api/v2/documents.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "date",
+              "value": "2026-06-10"
+            },
+            {
+              "name": "type",
+              "value": "2"
+            },
+            {
+              "name": "Subscription-Key",
+              "value": "YOUR_EDINET_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        64,
+        32
+      ],
+      "id": "9a367933-49f6-4582-9575-471b60cbc83d",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8c19e28f-929a-49e1-ab3e-0ee21bc93466",
+              "leftValue": "={{ $json.docTypeCode }}",
+              "rightValue": "120",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "f029a92d-259e-4f52-b057-87c5d8b73009",
+              "leftValue": "={{ $json.secCode }}",
+              "rightValue": "{{ $('When Executed by Another Workflow').item.json.secCode }}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -272,
+        224
+      ],
+      "id": "7cfcaa09-b745-41f6-b00a-9c3744b0007d",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "results",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        240,
+        32
+      ],
+      "id": "a0ac9711-53ad-4e96-a2c6-8f8d2447584d",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.edinet-fsa.go.jp/api/v2/documents/{{ $json.docID }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "5"
+            },
+            {
+              "name": "Subscription-Key",
+              "value": "YOUR_EDINET_API_KEY"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -112,
+        224
+      ],
+      "id": "52c20637-29f7-4b4a-a1ac-88ca6e646faa",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        64,
+        224
+      ],
+      "id": "9928687a-5829-44f6-8424-31cec376d68b",
+      "name": "Compression"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_2",
+        "options": {
+          "encoding": "utf16"
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        224
+      ],
+      "id": "2081a29b-19e4-46bd-9c55-6e86c0bf85f3",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const full = $input.first().json.data;\nconst lines = full.split(/\\r?\\n/);\n\n// --- 数値3項目（従業員の状況）---\nconst targets = {\n  平均年間給与: 'AverageAnnualSalary',\n  平均勤続年数: 'AverageLengthOfService',\n  平均年齢: 'AverageAge'\n};\nconst result = {};\nfor (const [label, id] of Object.entries(targets)) {\n  const line = lines.find(l => l.includes(id) && l.includes('ReportingCompany'));\n  const nums = line ? line.match(/[\\d.]+/g) : null;\n  result[label] = nums ? nums[nums.length - 1] : '取得失敗';\n}\n\n// --- 定性テキスト（事業内容・経営方針・研究開発）---\nconst textTargets = {\n  事業の内容: 'DescriptionOfBusiness',\n  経営方針_課題: 'BusinessPolicyBusinessEnvironment',\n  研究開発活動: 'ResearchAndDevelopmentActivities'\n};\nfor (const [label, id] of Object.entries(textTargets)) {\n  const line = lines.find(l => l.includes(id));\n  // タブ区切りの最後の要素（本文）を取得し、長すぎる場合は先頭3000字に制限\n  if (line) {\n    const parts = line.split('\\t');\n    let body = parts[parts.length - 1].replace(/^\"|\"$/g, '');\n    result[label] = body.substring(0, 3000);\n  } else {\n    result[label] = '取得失敗';\n  }\n}\n\nreturn { json: result };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        432
+      ],
+      "id": "b1c6ca9a-fdf4-49d7-bdca-fc2515a723a7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=以下の有価証券報告書データを就活生向けに整理してください。\n\n【従業員データ】\n平均年間給与: {{ $json.平均年間給与 }}円 / 平均勤続年数: {{ $json.平均勤続年数 }}年 / 平均年齢: {{ $json.平均年齢 }}歳\n\n【事業の内容】\n{{ $json.事業の内容 }}\n\n【経営方針・課題】\n{{ $json.経営方針_課題 }}\n\n【研究開発活動】\n{{ $json.研究開発活動 }}\n\n- ir_nenshu：年収・勤続・年齢を一文で\n- ir_summary：事業内容と新規事業・研究開発の方向性を300字で",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -112,
+        432
+      ],
+      "id": "e7ff578b-89f4-49d8-8649-7d12d2673474",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        -112,
+        592
+      ],
+      "id": "80eb3e71-7776-4ffc-85eb-33fb88a057f1",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Anthropic account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"ir_nenshu\": { \"type\": \"string\", \"description\": \"年収・勤続・年齢を一文で\" },\n    \"ir_summary\": { \"type\": \"string\", \"description\": \"事業内容と新規事業を300字で\" }\n  },\n  \"required\": [\"ir_nenshu\", \"ir_summary\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        592
+      ],
+      "id": "be6e5f38-81d3-445b-b01d-a12ec9b3e567",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "secCode"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -272,
+        32
+      ],
+      "id": "763a308b-2e52-4cb3-986c-3a76e4ce8bed",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -112
+      ],
+      "id": "5929ac8e-cca5-41b1-a034-6921b72ec2d7",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Compression",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compression": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "df12a338-9802-4e32-a731-c6a77952134f",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "wZfuXzigoUfpMT4X",
+  "tags": []
+}
